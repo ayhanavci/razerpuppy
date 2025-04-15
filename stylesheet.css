@@ -1,0 +1,21 @@
+/* Add your custom extension styling here */
+
+.battery-info-panel-tooltip {
+    border-radius: 7px;
+    padding: 4px 12px;
+    background-color: rgba(24,24,24,0.8);
+    text-align: center;
+    color: white;    
+}
+
+.device-popup-sub-menu {
+    width: 250px;
+    max-width: 250px;
+  }
+
+.panel-status-menu-box {
+  
+}
+.settings-menu-item {
+}
+

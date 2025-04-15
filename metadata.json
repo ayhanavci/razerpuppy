@@ -1,0 +1,9 @@
+{
+  "uuid": "razer-puppy@dokaton.com",
+  "name": "Razer Puppy",  
+  "description": "Monitor and display power status, configure DPI and logo rgb, add DPI hotkey for Razer mice. IMPORTANT: Requires installation of Open Razer.",    
+  "settings-schema": "org.gnome.shell.extensions.razer-puppy",
+  "shell-version": ["46", "47", "48"],
+  "url": "https://github.com/ayhanavci/razerpuppy",
+  "gettext-domain": "razer-puppy@dokaton.com"
+}
