@@ -2,6 +2,7 @@
 * [Requirements](#requirements)
 * [Features](#Features)
     * [v1.0](#v10)
+* [Screenshots](#screenshots)
 * [Disclaimer](#disclaimer)
 * [Contact](#contact)
 
