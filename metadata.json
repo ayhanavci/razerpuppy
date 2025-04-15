@@ -1,7 +1,7 @@
 {
   "uuid": "razer-puppy@dokaton.com",
   "name": "Razer Puppy",  
-  "description": "Monitor and display power status, configure DPI and logo rgb, add DPI hotkey for Razer mice. IMPORTANT: Requires installation of Open Razer.",    
+  "description": "Razer Mice battery watcher (accurate power percentage and charging status), DPI and RGB configuration extension. Also enables a user defined global hotkey to switch DPI. IMPORTANT: Requires installation of Open Razer.",    
   "settings-schema": "org.gnome.shell.extensions.razer-puppy",
   "shell-version": ["46", "47", "48"],
   "url": "https://github.com/ayhanavci/razerpuppy",
