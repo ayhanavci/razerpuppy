@@ -30,25 +30,25 @@ It utilizes [Open Razer](https://openrazer.github.io/) DBus daemon. So make sure
 
 # Screenshots
 
-<img src="./.readme/battery_icon.png" alt="Alt Text" width="40%" height="40%">
+<img src="./.readme/battery_icon.png" alt="Alt Text" width="70%" height="70%">
 
 The extension in the tray looks like this. It can be configured to remove percentage text or make it display on mouse hover.
 
-<img src="./.readme/battery_menu.png" alt="Alt Text" width="40%" height="40%">
+<img src="./.readme/battery_menu.png" alt="Alt Text" width="70%" height="70%">
 
 The menu is dynamic, it will add / remove Razer mice when they are plugged in or out. So are the on-board dpi of the respective mice. 
 
 **The values in ALL of the settings below are going to be written into the device itself. So they will retain these values regardless of the software or computer.**
 
-<img src="./.readme/settings_dpi.png" alt="Alt Text" width="40%" height="40%">
+<img src="./.readme/settings_dpi.png" alt="Alt Text" width="70%" height="70%">
 
 DPI settings. All plugged in Razer mice will be displayed here. You could have multiple Razer mice, all of which will be displayed here. And you can select which mouse your hotkey will work on. Here you can also set the poll rate and set new DPI for your mouse. 
 
-<img src="./.readme/settings_power.png" alt="Alt Text" width="40%" height="40%">
+<img src="./.readme/settings_power.png" alt="Alt Text" width="70%" height="70%">
 
 All plugged in razer devices with a battery (not just mice, ie keyboards too) will be displayed here. Here you can set sleep duration (for power saving) and low power mode treshold.It will instantly apply to the device as you change the settings.
 
-<img src="./.readme/settings_logorgb.png" alt="Alt Text" width="40%" height="40%">
+<img src="./.readme/settings_logorgb.png" alt="Alt Text" width="70%" height="70%">
 
 All plugged in Razer devices with a Logo RGB feature will be displayed here. You can select Off / Static / Breathe Single, Dual, Random / Spectrum / Reactive (on scroll) and with 0/1/2 color (depending on what you select) as well as the brightness. It will instantly apply to the device as you change the settings.
 
