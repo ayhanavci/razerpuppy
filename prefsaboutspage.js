@@ -32,23 +32,13 @@ export const AboutPageHandler = class AboutPageHandler {
     this._project_row.title = _("Project");
     this._project_link = new Gtk.LinkButton({
       valign: Gtk.Align.CENTER,
-      label: "https://github.com/ayhanavci/radiokayra",
+      label: "https://github.com/ayhanavci/razerpuppy",
       focusable: 1,
-      uri: "https://github.com/ayhanavci/radiokayra"
+      uri: "https://github.com/ayhanavci/razerpuppy"
     });
     this._project_row.add_suffix(this._project_link);
     this._urlsGroup.add(this._project_row);
 
-    this._extension_row = new Adw.ActionRow();
-    this._extension_row.title = _("Extension");
-    this._extension_link = new Gtk.LinkButton({
-      valign: Gtk.Align.CENTER,
-      label: "https://extensions.gnome.org/extension/7649/radio-kayra/",
-      focusable: 1,
-      uri: "https://extensions.gnome.org/extension/7649/radio-kayra/"
-    });
-    this._extension_row.add_suffix(this._extension_link);
-    this._urlsGroup.add(this._extension_row);
 
     this._orazer_row = new Adw.ActionRow();
     this._orazer_row.title = _("Open Razer");

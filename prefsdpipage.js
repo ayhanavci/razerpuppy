@@ -130,7 +130,7 @@ export const DpiPageHandler = class DpiPageHandler {
         this._settingsPage.add(this._dpiSpinsGroup);        
 
         this._pollrate_label = new Gtk.Label();
-        this._pollrate_label.set_text(_("Pol Rate"))
+        this._pollrate_label.set_text(_("Poll Rate"))
         this._dropdownpollrates = new Gtk.DropDown();
         this._combo_pollrate_strings = new Gtk.StringList();
         this._dropdownpollrates.set_model(this._combo_pollrate_strings);
