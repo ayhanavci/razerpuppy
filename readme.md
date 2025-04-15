@@ -54,7 +54,7 @@ All plugged in Razer devices with a Logo RGB feature will be displayed here. You
 
 # Disclaimer
 
-1) This project is not affiliated neither with [Razer Inc.](https://www.razer.com/) nor [Open Razer](https://openrazer.github.io/).
+1) This project is not affiliated either with [Razer Inc.](https://www.razer.com/) nor [Open Razer](https://openrazer.github.io/).
 2) I have made this project for my own use. I own 2 Razer mice, one with a battery and the other with a RGB. So I my tests are limited to these two devices. 
 
  
