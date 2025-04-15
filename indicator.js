@@ -162,7 +162,6 @@ export const Indicator = GObject.registerClass(
         onDeviceList(device_list) {
             try {
                 panelIndicator.logDevelopment(`onDeviceList [${device_list}]`);
-                //IO2425H32702519, PM1944H09517643
                 panelIndicator.clearUnpluggedDevices(device_list);
                 panelIndicator.updateActiveDevices(device_list);
 
