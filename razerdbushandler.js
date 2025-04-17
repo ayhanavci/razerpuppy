@@ -123,12 +123,13 @@ export class RazerDbusHandler {
                                     //logDevelopment(`PARAM1:${source_object} PARAM2:${res} PARAM3:${data} ISCHARGING:${is_charging}`);
                                 }
                                 catch (e) {
-                                    let errorCode = Gio.DBusError.get_remote_error(e);
+                                    is_charging_error_callback(device_serial, e);
+                                    /*let errorCode = Gio.DBusError.get_remote_error(e);
                                     logException(`${log_method_name} connection.call [${e.message}] ${errorCode} EXCEPTION: ${e}`);
                                     if (errorCode === "org.freedesktop.DBus.Error.UnknownMethod")
                                         is_charging_error_callback(device_serial, e, true);
                                     else
-                                        is_charging_error_callback(device_serial, e, false);
+                                        is_charging_error_callback(device_serial, e, false);*/
                                 }
 
                             });

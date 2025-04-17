@@ -1,19 +1,18 @@
 import GObject from "gi://GObject";
 import St from 'gi://St';
 import Clutter from "gi://Clutter";
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 
 import { gettext as _, } from "resource:///org/gnome/shell/extensions/extension.js";
 
-let panelIndicator;
 const DpiSubMenu = GObject.registerClass(
     {
         GTypeName: "RazerPuppyDpiSubMenu",
     },
     class extends PopupMenu.PopupBaseMenuItem {
-        constructor() {
+        constructor(panelIndicator) {
             super();
+            this._panelIndicator = panelIndicator;
             this._dpi = -1;                 
             this._device = null;
             this._parent = null;            
@@ -29,8 +28,10 @@ const DpiSubMenu = GObject.registerClass(
             this.vbox.add_child(this.label);
             this._handler_activate = this.connect('activate', (_item, _event) => {                 
                 //console.error(`DPI CLICKED ${this._parent}  ${this._dpi}`); 
-                panelIndicator._razer_dbus.SetDpi(this._device._device_serial, this._dpi);
-                panelIndicator._razer_dbus.GetDpi(this._device._device_serial, panelIndicator.onGetDpi, panelIndicator.onGetDpi);
+                this._panelIndicator._razer_dbus.SetDpi(this._device._device_serial, this._dpi);
+                this._panelIndicator._razer_dbus.GetDpi(this._device._device_serial, 
+                    this._panelIndicator.onGetDpi.bind(this._panelIndicator), 
+                    this._panelIndicator.onGetDpi.bind(this._panelIndicator));
                 return Clutter.EVENT_PROPAGATE;
             });                                    
         }        
@@ -45,9 +46,7 @@ const DpiSubMenu = GObject.registerClass(
         }
         clear() {
             this.disconnect(this._handler_activate);
-            this._handler_activate = null;
-            this.label?.destroy();
-            this.vbox?.destroy();
+            this._handler_activate = null;            
             this.label = null;
             this.vbox = null;
         }                
@@ -65,11 +64,10 @@ export const DeviceSubMenu = GObject.registerClass(
             this._dpi_slots = [];
             this._previous_dpis = [];
             this._current_dpi = -1;
-            this.label.text = "";
-            panelIndicator = _panelIndicator;
+            this.label.text = "";            
             this.menu.actor.add_style_class_name("device-popup-sub-menu");            
             for (let i = 0; i < 20; ++i) {
-                let new_item = new DpiSubMenu();
+                let new_item = new DpiSubMenu(_panelIndicator);
                 this._dpi_slots.push(new_item);
                 new_item.hide();
                 this.menu.addMenuItem(new_item);
@@ -77,10 +75,7 @@ export const DeviceSubMenu = GObject.registerClass(
                 
             //this.menu.addAction('Submenu Item 0', () => console.log('activated'));
         }
-        destroy() {                       
-            this.emit('destroy');    
-            Main.sessionMode.disconnectObject(this);
-        }
+        
         
         UpdateDevice(_this, device) 
         {

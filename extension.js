@@ -4,7 +4,7 @@ import * as MenuButton from './indicator.js'
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 
-export default class IndicatorExampleExtension extends Extension {
+export default class RazerPuppyExtension extends Extension {
     enable() {        
         this.settings = this.getSettings();
         this._indicator = new MenuButton.Indicator(this);
@@ -17,9 +17,7 @@ export default class IndicatorExampleExtension extends Extension {
     }
 
     disable() {
-        this.removeKeybinding();
-        this._indicator.cleanup();
-        this._indicator.destroy();
+        this.removeKeybinding();        
         this._indicator = null;
     }
     addKeybinding() {

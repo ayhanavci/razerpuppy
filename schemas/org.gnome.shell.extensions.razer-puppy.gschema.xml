@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>  
+  <schema id="org.gnome.shell.extensions.razer-puppy" path="/org/gnome/shell/extensions/razer-puppy/">    
+    <key type="s" name="show-battery-device-serial">
+        <default>""</default>
+        <summary>The active device</summary>
+        <description></description>
+    </key>                  
+    <key type="s" name="dpi-hotkey-device-serial">
+        <default>""</default>
+        <summary>The active device</summary>
+        <description></description>
+    </key>  
+    <key type="u" name="percentage-font-size">
+        <default>14</default>
+        <summary>Percentage Font Size</summary>
+        <description>Font size of the battery percentage info on the tray</description>
+    </key>                 
+    <key name="dpi-keybinding" type="as">
+        <default><![CDATA[['<Ctrl><Super>d']]]></default>
+        <summary>Keyboard Shortcut</summary>
+        <description>Keyboard Shortcut Keybinding</description>
+    </key>      
+    <key name="show-power-percentage" type="b">
+        <default>true</default>
+        <summary>Display battery percentage</summary>
+        <description>
+            If true, shows the battery % next to icon
+        </description>
+    </key>     
+    <key name="show-hover-power" type="b">
+        <default>false</default>
+        <summary>Display battery percentage</summary>
+        <description>
+            If true, shows the battery % inside tooltip
+        </description>
+    </key>          
+    <key name="dpi-change-notification" type="b">
+        <default>false</default>
+        <summary>Dpi change notification</summary>
+        <description>
+            If true, sends notification when the dpi changes
+        </description>
+    </key>     
+  </schema>
+</schemalist>
+
+    

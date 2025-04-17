@@ -13,13 +13,11 @@ import * as DevicePopup from './devicesubmenu.js'
 import * as Constants from './constants.js'
 import * as Utils from "./utils.js";
 
-let panelIndicator = null;
 export const Indicator = GObject.registerClass(
     class Indicator extends PanelMenu.Button {
         _init(extension) {
             super._init(0.0, _('Razer Puppy Indicator'));
-
-            panelIndicator = this;
+            
             this._extension = extension;
             this._settings = extension.getSettings();
             this._devices = [];
@@ -65,7 +63,7 @@ export const Indicator = GObject.registerClass(
                 text: _(""),
             });
 
-            let new_size = panelIndicator._settings.get_uint(Constants.SCHEMA_PERCENTAGE_FONT_SIZE);
+            let new_size = this._settings.get_uint(Constants.SCHEMA_PERCENTAGE_FONT_SIZE);
             this._percentage_label.style = `font-size: ${new_size}px;`;
             this._percentage_label.style_changed();
             this._percentage_label.hide();
@@ -75,57 +73,57 @@ export const Indicator = GObject.registerClass(
             //this.add_child(this._battery_icon);
 
 
-            panelIndicator._razer_dbus = new RazerDbusHandler.RazerDbusHandler();
+            this._razer_dbus = new RazerDbusHandler.RazerDbusHandler();
 
             for (let i = 0; i < this._max_device_menu_count; ++i) {
-                let device_sub_menu = new DevicePopup.DeviceSubMenu(panelIndicator, i);
-                panelIndicator._device_popup_menus.push(device_sub_menu);
-                panelIndicator.menu.addMenuItem(device_sub_menu);
+                let device_sub_menu = new DevicePopup.DeviceSubMenu(this, i);
+                this._device_popup_menus.push(device_sub_menu);
+                this.menu.addMenuItem(device_sub_menu);
                 device_sub_menu.hide();
             }
             this._settingsMenuItem = new PopupMenu.PopupImageMenuItem(_("Settings"), Constants.ICON_SETTINGS, { style_class: Constants.CSS_SETTINGS_POPUP, },);
-            this._handler_settings_menu_activate = this._settingsMenuItem.connect("activate", () => { panelIndicator._extension.openPreferences(); });
+            this._handler_settings_menu_activate = this._settingsMenuItem.connect("activate", () => { this._extension.openPreferences(); });
             this.menu.addMenuItem(this._settingsMenuItem);
 
             this._handler_power_per_change = this._settings.connect(`changed::${Constants.SCHEMA_SHOW_POWER_PERCENTAGE}`, () => {                                
-                panelIndicator.showPowerPercentage(panelIndicator.getDefaultPowerDevice());
+                this.showPowerPercentage(this.getDefaultPowerDevice());
             });
             this._handler_font_size_change = this._settings.connect(`changed::${Constants.SCHEMA_PERCENTAGE_FONT_SIZE}`, () => {
-                let size = panelIndicator._settings.get_uint(Constants.SCHEMA_PERCENTAGE_FONT_SIZE);
-                panelIndicator._percentage_label.style = `font-size: ${size}px;`;
-                panelIndicator._percentage_label.style_changed();
+                let size = this._settings.get_uint(Constants.SCHEMA_PERCENTAGE_FONT_SIZE);
+                this._percentage_label.style = `font-size: ${size}px;`;
+                this._percentage_label.style_changed();
             });
             //return;
-            panelIndicator._razer_dbus.GetDevices(this.onDeviceList, this.onDeviceListError);
+            this._razer_dbus.GetDevices(this.onDeviceList.bind(this), this.onDeviceListError.bind(this));
             //return;
-            panelIndicator._repeat_timer = GLib.timeout_add_seconds(
+            this._repeat_timer = GLib.timeout_add_seconds(
                 GLib.PRIORITY_DEFAULT, 3,
                 () => {
-                    panelIndicator._razer_dbus.GetDevices(this.onDeviceList);
+                    this._razer_dbus.GetDevices(this.onDeviceList.bind(this), this.onDeviceListError.bind(this));
                     return true;
                 });
         }
 
         showPowerPercentage(device) {
-            if (!panelIndicator._settings.get_boolean(Constants.SCHEMA_SHOW_POWER_PERCENTAGE)) {
-                panelIndicator._percentage_label.hide();
+            if (!this._settings.get_boolean(Constants.SCHEMA_SHOW_POWER_PERCENTAGE)) {
+                this._percentage_label.hide();
                 return;
             }           
             if (device === null || device === undefined) {
-                panelIndicator._percentage_label.hide();
+                this._percentage_label.hide();
                 return;//No saved device nor any connected device with battery
             }                
             
             let truncated = Math.trunc(device._power_level);
-            panelIndicator._percentage_label.text = `${truncated.toString()}%`;
+            this._percentage_label.text = `${truncated.toString()}%`;
 
-            panelIndicator._percentage_label.show();
+            this._percentage_label.show();
         }
         switchToNextDPI() {
-            let default_dpi_device_serial = panelIndicator._settings.get_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL);
+            let default_dpi_device_serial = this._settings.get_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL);
             if (Utils.isEmptyString(default_dpi_device_serial))
                 return;
-            let razer_device = panelIndicator.getRazerDevice(default_dpi_device_serial);
+            let razer_device = this.getRazerDevice(default_dpi_device_serial);
             if (razer_device === null)
                 return;
             let dpis = razer_device._onboard_dpis;
@@ -133,118 +131,120 @@ export const Indicator = GObject.registerClass(
             if (razer_device._hotkey_dpi_index === dpis.length - 1) razer_device._hotkey_dpi_index = 0;
             else razer_device._hotkey_dpi_index += 1;
 
-            panelIndicator._razer_dbus.SetDpi(default_dpi_device_serial, dpis[razer_device._hotkey_dpi_index]);
+            this._razer_dbus.SetDpi(default_dpi_device_serial, dpis[razer_device._hotkey_dpi_index]);
         }
 
         onIntrospect(device_serial, xml) {            
             let bus_info = Gio.DBusNodeInfo.new_for_xml(xml);
             if (bus_info === null) {
-                panelIndicator.logDevelopment(`onIntrospect ${device_serial} No bus info]`)
+                this.logDevelopment(`onIntrospect ${device_serial} No bus info]`)
                 return;
             }
             let bus_power_interface = bus_info.lookup_interface('razer.device.power');
             if (bus_power_interface === null) {
-                panelIndicator.logDevelopment(`onIntrospect ${device_serial} No power interface]`);
+                this.logDevelopment(`onIntrospect ${device_serial} No power interface]`);
                 return;
             }
             let get_battery_method = bus_power_interface.lookup_method('getBattery');
             if (get_battery_method === null) {
-                panelIndicator.logDevelopment(`onIntrospect ${device_serial} No getBattery method`);
+                this.logDevelopment(`onIntrospect ${device_serial} No getBattery method`);
                 return;
             }
-            panelIndicator.logDevelopment(`onIntrospect ${device_serial} found getBattery method!`);
-            let device = panelIndicator.getRazerDevice(device_serial);
+            this.logDevelopment(`onIntrospect ${device_serial} found getBattery method!`);
+            let device = this.getRazerDevice(device_serial);
             device._has_get_battery_method = true;
-            panelIndicator._razer_dbus.GetBatteryPower(device_serial,
-                panelIndicator.onPowerStatus,
-                panelIndicator.onPowerError);
+            this._razer_dbus.GetBatteryPower(device_serial,
+                this.onPowerStatus.bind(this),
+                this.onPowerError.bind(this));
         }
         onDeviceList(device_list) {
             try {
-                panelIndicator.logDevelopment(`onDeviceList [${device_list}]`);
-                panelIndicator.clearUnpluggedDevices(device_list);
-                panelIndicator.updateActiveDevices(device_list);
+                this.logDevelopment(`onDeviceList [${device_list}]`);
+                this.clearUnpluggedDevices(device_list);
+                this.updateActiveDevices(device_list);
 
                 //Re-create connected device list. 
                 for (let i = 0; i < device_list.length; ++i) {
                     let device_serial = device_list[i];
 
-                    let razer_device = panelIndicator.getRazerDevice(device_serial);
+                    let razer_device = this.getRazerDevice(device_serial);
                     if (razer_device === null) {
-                        panelIndicator.logDevelopment(`ADDING NEW DEVICE: ${device_serial}`);
+                        this.logDevelopment(`ADDING NEW DEVICE: ${device_serial}`);
                         razer_device = new RazerDbusHandler.RazerDevice();
                         razer_device._device_serial = device_serial;
-                        panelIndicator._devices.push(razer_device);                        
+                        this._devices.push(razer_device);                        
                     }
-                    panelIndicator._razer_dbus.GetDeviceName(razer_device._device_serial,
-                        panelIndicator.onDeviceName,
-                        panelIndicator.onDeviceNameError);
-                    panelIndicator._razer_dbus.GetDeviceType(razer_device._device_serial,
-                        panelIndicator.onDeviceType,
-                        panelIndicator.onDeviceTypeError);
+                    this._razer_dbus.GetDeviceName(razer_device._device_serial,
+                        this.onDeviceName.bind(this),
+                        this.onDeviceNameError.bind(this));
+                    this._razer_dbus.GetDeviceType(razer_device._device_serial,
+                        this.onDeviceType.bind(this),
+                        this.onDeviceTypeError.bind(this));
 
                     if (razer_device._has_get_battery_method === undefined)
-                        panelIndicator._razer_dbus.Introspect(razer_device._device_serial, panelIndicator.onIntrospect);
+                        this._razer_dbus.Introspect(razer_device._device_serial, this.onIntrospect.bind(this));
                     else if (razer_device._has_get_battery_method === true)
-                        panelIndicator._razer_dbus.GetBatteryPower(razer_device._device_serial,
-                            panelIndicator.onPowerStatus,
-                            panelIndicator.onPowerError);
+                        this._razer_dbus.GetBatteryPower(razer_device._device_serial,
+                            this.onPowerStatus.bind(this),
+                            this.onPowerError.bind(this));
                 }
             }
             catch (e) {
-                panelIndicator.logException(`onDeviceList exception [${device_list}] [${e}]`);
+                this.logException(`onDeviceList exception [${device_list}] [${e}]`);
             }
-            panelIndicator.LogState("onDeviceList");
+            this.LogState("onDeviceList");
         }
         onDeviceListError(error) {
-            panelIndicator.logException(`onDeviceListError [${error}]`);
+            this.logException(`onDeviceListError [${error}]`);
         }
         onDeviceName(device_serial, device_name) {
-            panelIndicator.logDevelopment(`onDeviceName [${device_serial}] [${device_name}]`);
+            this.logDevelopment(`onDeviceName [${device_serial}] [${device_name}]`);
             try {
-                let device = panelIndicator.getRazerDevice(device_serial);
+                let device = this.getRazerDevice(device_serial);
                 if (device === null) return;
                 if (Utils.isEmptyString(device._device_name) || device._device_name !== device_name) 
                     device._device_name = device_name;                                    
-                panelIndicator.showDevicePopupMenu(device);
+                this.showDevicePopupMenu(device);
             }
             catch (error) {
-                panelIndicator.logException(`onDeviceName EXCEPTION [${device_serial}] [${device_name}] [${error}]`);
+                this.logException(`onDeviceName EXCEPTION [${device_serial}] [${device_name}] [${error}]`);
             }
-            panelIndicator.LogState("onDeviceName");
+            this.LogState("onDeviceName");
         }
         onDeviceNameError(device_serial, error) {
-            panelIndicator.logException(`onDeviceNameError [${device_serial}] [${error}]`);
+            this.logException(`onDeviceNameError [${device_serial}] [${error}]`);
         }
         onDeviceType(device_serial, device_type) {
-            panelIndicator.logDevelopment(`onDeviceType [${device_serial}] [${device_type}]`);
+            this.logDevelopment(`onDeviceType [${device_serial}] [${device_type}]`);
             try {
-                let device = panelIndicator.getRazerDevice(device_serial);
+                let device = this.getRazerDevice(device_serial);
                 if (device !== null)
                     device._device_type = device_type;
                 if (device_type === Constants.DEVICE_TYPE_MOUSE) {
-                    let default_dpi_device_serial = panelIndicator._settings.get_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL);
+                    let default_dpi_device_serial = this._settings.get_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL);
                     if (Utils.isEmptyString(default_dpi_device_serial))  //If there is no default already
-                        panelIndicator._settings.set_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL, device_serial);
+                        this._settings.set_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL, device_serial);
 
-                    panelIndicator._razer_dbus.GetDpi(device_serial, panelIndicator.onGetDpi, panelIndicator.onGetDpi);
-                    panelIndicator._razer_dbus.GetDpiStages(device_serial, panelIndicator.onGetDpiStages, panelIndicator.onGetDpiStagesError);
+                    this._razer_dbus.GetDpi(device_serial, 
+                        this.onGetDpi.bind(this), this.onGetDpiError.bind(this));
+                    this._razer_dbus.GetDpiStages(device_serial, 
+                        this.onGetDpiStages.bind(this), this.onGetDpiStagesError.bind(this));
                 }
             }
             catch (error) {
-                panelIndicator.logException(`onDeviceType EXCEPTION [${device_serial}] [${device_type}] [${error}]`);
+                this.logException(`onDeviceType EXCEPTION [${device_serial}] [${device_type}] [${error}]`);
             }
-            panelIndicator.LogState("onDeviceType");
+            this.LogState("onDeviceType");
         }
         onDeviceTypeError(device_serial, error) {
-            panelIndicator.logException(`onDeviceTypeError [${device_serial}] [${error}]`);
+            this.logException(`onDeviceTypeError [${device_serial}] [${error}]`);
         }
         onGetDpiStages(device_serial, stages) {
-            panelIndicator.logDevelopment(`onGetDpiStages [${device_serial}] [${stages.length}] [${stages}]`);
+            this.logDevelopment(`onGetDpiStages [${device_serial}] [${stages.length}] [${stages}]`);
             if (stages === null)
                 return;
             try {
-                let device = panelIndicator.getRazerDevice(device_serial);
+                let device = this.getRazerDevice(device_serial);
                 if (device === null) return;
                 device._onboard_dpis = [];
                 device._onboard_dpis_xy = [];
@@ -257,58 +257,58 @@ export const Indicator = GObject.registerClass(
                     device._onboard_dpis.push(x);
                 }
 
-                panelIndicator.UpdatePopupDpis(device);
+                this.UpdatePopupDpis(device);
             }
             catch (error) {
-                panelIndicator.logException(`onGetDpiStages exception [${device_serial}] [${error}]`);
+                this.logException(`onGetDpiStages exception [${device_serial}] [${error}]`);
             }
         }
         onGetDpiStagesError(device_serial, error) {
-            panelIndicator.logException(`onGetDpiStagesError [${device_serial}] [${error}]`);
+            this.logException(`onGetDpiStagesError [${device_serial}] [${error}]`);
         }
         onGetDpi(device_serial, dpi) {
-            panelIndicator.logDevelopment(`onGetDpi [${device_serial}] [${dpi}]`);
+            this.logDevelopment(`onGetDpi [${device_serial}] [${dpi}]`);
 
             try {
-                let device = panelIndicator.getRazerDevice(device_serial);
+                let device = this.getRazerDevice(device_serial);
                 if (device === null)
                     return;
                 device._current_dpi = dpi[0];
                 device._current_dpi_xy = dpi;
 
-                panelIndicator.UpdatePopupCurrentDpi(device);
+                this.UpdatePopupCurrentDpi(device);
             }
             catch (error) {
-                panelIndicator.logException(`onGetDpi exception [${device_serial}] [${error}]`);
+                this.logException(`onGetDpi exception [${device_serial}] [${error}]`);
             }
 
         }
         onGetDpiError(device_serial, error) {
-            panelIndicator.logException(`onGetDpiError [${device_serial}] [${error}]`);
+            this.logException(`onGetDpiError [${device_serial}] [${error}]`);
         }
         onPowerStatus(device_serial, power_level, no_method) {
-            panelIndicator.logDevelopment(`onPowerStatus [${device_serial}] [${power_level}] [${no_method}]`);
-            let default_battery_device_serial = panelIndicator._settings.get_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL);
+            this.logDevelopment(`onPowerStatus [${device_serial}] [${power_level}] [${no_method}]`);
+            let default_battery_device_serial = this._settings.get_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL);
             if (Utils.isEmptyString(default_battery_device_serial)) { //Check if there is no default device for power
                 default_battery_device_serial = device_serial;
-                panelIndicator._settings.set_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL, device_serial);
+                this._settings.set_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL, device_serial);
             }
-            let device = panelIndicator.getRazerDevice(device_serial);
+            let device = this.getRazerDevice(device_serial);
             if (device !== null) {
-                power_level = panelIndicator.getNormalizedPowerLevel(device, power_level);
+                power_level = this.getNormalizedPowerLevel(device, power_level);
                 device._power_level = power_level;
             }
-            panelIndicator._razer_dbus.GetIsCharging(device_serial, panelIndicator.onIsCharging, panelIndicator.onIsChargingError);
-            panelIndicator.LogState("onPowerStatus");
+            this._razer_dbus.GetIsCharging(device_serial, this.onIsCharging.bind(this), this.onIsChargingError.bind(this));
+            this.LogState("onPowerStatus");
         }
         onPowerError(device_serial, error) {
-            panelIndicator.logException(`onPowerError [${device_serial}] [${error}]`);
+            this.logException(`onPowerError [${device_serial}] [${error}]`);
         }
         getNormalizedPowerLevel(device, new_power_level) {
             let normalized_power = new_power_level;
 
             if (new_power_level <= 0) {
-                for (let i = 0; i < panelIndicator._max_power_history_count; ++i) {
+                for (let i = 0; i < this._max_power_history_count; ++i) {
                     if (device._power_level_history[i] > 1) { //If even 1 of the last n values is greater than 1%, then no change
                         normalized_power = device._power_level;
                         break;
@@ -317,7 +317,7 @@ export const Indicator = GObject.registerClass(
             }
 
             //Insert new power 
-            if (device._power_level_history.length < panelIndicator._max_power_history_count) { //if there is a space
+            if (device._power_level_history.length < this._max_power_history_count) { //if there is a space
                 device._power_level_history.push(new_power_level);
             }
             else {//if the list is full, ditch the oldest
@@ -328,99 +328,99 @@ export const Indicator = GObject.registerClass(
             return normalized_power;
         }
         onIsCharging(device_serial, is_charging, error) {
-            panelIndicator.logDevelopment(`onIsCharging [${device_serial}] [${is_charging}] [${error}]`);
+            this.logDevelopment(`onIsCharging [${device_serial}] [${is_charging}] [${error}]`);
             try {
                 if (error !== null)
                     return;
-                let device = panelIndicator.getRazerDevice(device_serial);
+                let device = this.getRazerDevice(device_serial);
                 if (device === null)
                     return;
-                let default_battery_device_serial = panelIndicator._settings.get_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL);
+                let default_battery_device_serial = this._settings.get_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL);
                 device._is_charging = is_charging;
                 if (device_serial === default_battery_device_serial) { //Default power device is this device
                     let power_level = device._power_level;
-                    panelIndicator.showPowerPercentage(device);
-                    panelIndicator.logDevelopment(`onIsCharging Active Device Found: [${device_serial}] [${power_level}]`);
+                    this.showPowerPercentage(device);
+                    this.logDevelopment(`onIsCharging Active Device Found: [${device_serial}] [${power_level}]`);
                     if (is_charging) {
                         if (power_level > 90)
-                            panelIndicator._battery_icon.set_gicon(panelIndicator._battery_charging_full_icon);
+                            this._battery_icon.set_gicon(this._battery_charging_full_icon);
                         else if (power_level > 35)
-                            panelIndicator._battery_icon.set_gicon(panelIndicator._battery_charging_good_icon);
+                            this._battery_icon.set_gicon(this._battery_charging_good_icon);
                         else if (power_level === 0)
-                            panelIndicator._battery_icon.set_gicon(panelIndicator._battery_charging_empty_icon);
+                            this._battery_icon.set_gicon(this._battery_charging_empty_icon);
                         else
-                            panelIndicator._battery_icon.set_gicon(panelIndicator._battery_charging_low_icon);
+                            this._battery_icon.set_gicon(this._battery_charging_low_icon);
                     }
                     else {
-                        //panelIndicator.logDevelopment(`onPowerStatus Active Device Found: [${device_serial}] [${power_level}]`);   
+                        //this.logDevelopment(`onPowerStatus Active Device Found: [${device_serial}] [${power_level}]`);   
                         if (power_level > 90)
-                            panelIndicator._battery_icon.set_gicon(panelIndicator._battery_full_icon);
+                            this._battery_icon.set_gicon(this._battery_full_icon);
                         else if (power_level > 35)
-                            panelIndicator._battery_icon.set_gicon(panelIndicator._battery_good_icon);
+                            this._battery_icon.set_gicon(this._battery_good_icon);
                         else if (power_level > 1)
-                            panelIndicator._battery_icon.set_gicon(panelIndicator._battery_low_icon);
+                            this._battery_icon.set_gicon(this._battery_low_icon);
                         else if (power_level > 0)
-                            panelIndicator._battery_icon.set_gicon(panelIndicator._battery_empty_icon);
+                            this._battery_icon.set_gicon(this._battery_empty_icon);
                         else if (power_level === 0)
-                            panelIndicator._battery_icon.set_gicon(panelIndicator._battery_idle_icon);
+                            this._battery_icon.set_gicon(this._battery_idle_icon);
                         else
-                            panelIndicator._battery_icon.set_gicon(panelIndicator._battery_missing_icon);
+                            this._battery_icon.set_gicon(this._battery_missing_icon);
                     }
                 }
                 else {
-                    panelIndicator.logDevelopment(`onIsCharging Not active battery Device: [${device_serial}] [${default_battery_device_serial}]`);
+                    this.logDevelopment(`onIsCharging Not active battery Device: [${device_serial}] [${default_battery_device_serial}]`);
                 }
             }
             catch (_error) {
-                panelIndicator.logException(`onIsCharging [${device_serial}] [${_error}] [${error}]`);
+                this.logException(`onIsCharging [${device_serial}] [${_error}] [${error}]`);
             }
 
-            panelIndicator.LogState("onIsCharging");
+            this.LogState("onIsCharging");
         }
-        onIsChargingError(device_serial, error, no_method) {
-            panelIndicator.logDevelopment(`onIsChargingError [${device_serial}] No Battery:[${no_method}][${error}]`);
+        onIsChargingError(device_serial, error) {
+            this.logDevelopment(`onIsChargingError [${device_serial}] [${error}]`);
         }
         getRazerDevice(device_serial) {
             try {
-                for (let i = 0; i < panelIndicator._devices.length; ++i) {
-                    if (panelIndicator._devices[i]._device_serial === device_serial)
-                        return panelIndicator._devices[i];
+                for (let i = 0; i < this._devices.length; ++i) {
+                    if (this._devices[i]._device_serial === device_serial)
+                        return this._devices[i];
                 }
             }
             catch (error) {
-                panelIndicator.logException(`getRazerDevice [${error}]`);
+                this.logException(`getRazerDevice [${error}]`);
             }
             return null;
         }
         getAnyRazerDeviceWithBattery() {
-            for (let i = 0; i < panelIndicator._devices.length; ++i) {
-                if (panelIndicator._devices[i]._has_get_battery_method === true) 
-                    return panelIndicator._devices[i];                
+            for (let i = 0; i < this._devices.length; ++i) {
+                if (this._devices[i]._has_get_battery_method === true) 
+                    return this._devices[i];                
             }
             return null;
         }
         getDefaultPowerDevice() {
             let device = null;
             //Try to get the device which was set as default power device
-            let default_battery_device_serial = panelIndicator._settings.get_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL);            
+            let default_battery_device_serial = this._settings.get_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL);            
             if (!Utils.isEmptyString(default_battery_device_serial)) 
-                device = panelIndicator._devices.find(dev => default_battery_device_serial === dev._device_serial);                        
+                device = this._devices.find(dev => default_battery_device_serial === dev._device_serial);                        
             
             //Default not found. Get any device with a battery
             if (device === null || device === undefined) {
-                device = panelIndicator.getAnyRazerDeviceWithBattery(); 
+                device = this.getAnyRazerDeviceWithBattery(); 
                 if (device !== null) //Set the device as default. 
-                    panelIndicator._settings.set_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL, device._device_serial);
+                    this._settings.set_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL, device._device_serial);
             }                
             
             return device;
         }
         showDevicePopupMenu(device) {
             try {
-                panelIndicator.logDevelopment(`showDevicePopupMenu ${device._device_serial} ${device._device_name}`);
+                this.logDevelopment(`showDevicePopupMenu ${device._device_serial} ${device._device_name}`);
                 let proper_slot = null;
-                for (let j = 0; j < panelIndicator._device_popup_menus.length; ++j) {
-                    let device_popup_menu = panelIndicator._device_popup_menus[j];
+                for (let j = 0; j < this._device_popup_menus.length; ++j) {
+                    let device_popup_menu = this._device_popup_menus[j];
                     if (device_popup_menu._device === null) {
                         if (proper_slot === null) proper_slot = device_popup_menu;
                     }
@@ -437,14 +437,14 @@ export const Indicator = GObject.registerClass(
                 }
             }
             catch (error) {
-                panelIndicator.logException(`showDevicePopupMenu EXCEPTION ${error}`);
+                this.logException(`showDevicePopupMenu EXCEPTION ${error}`);
             }
         }
         UpdatePopupDpis(device) {
             try {
-                panelIndicator.logDevelopment(`UpdatePopupDpis ${device}`);
-                for (let j = 0; j < panelIndicator._device_popup_menus.length; ++j) {
-                    let device_popup_menu = panelIndicator._device_popup_menus[j];
+                this.logDevelopment(`UpdatePopupDpis ${device}`);
+                for (let j = 0; j < this._device_popup_menus.length; ++j) {
+                    let device_popup_menu = this._device_popup_menus[j];
                     if (device_popup_menu._device === null) continue;
                     if (device_popup_menu._device._device_serial === device._device_serial) {
                         device_popup_menu.UpdateDpis(device_popup_menu);
@@ -453,15 +453,15 @@ export const Indicator = GObject.registerClass(
                 }
             }
             catch (error) {
-                panelIndicator.logException(`UpdatePopupDpis exception ${device} ${error}`);
+                this.logException(`UpdatePopupDpis exception ${device} ${error}`);
             }
 
         }
         UpdatePopupCurrentDpi(device) {
             try {
-                panelIndicator.logDevelopment(`UpdatePopupCurrentDpi ${device._device_serial}`);
-                for (let j = 0; j < panelIndicator._device_popup_menus.length; ++j) {
-                    let device_popup_menu = panelIndicator._device_popup_menus[j];
+                this.logDevelopment(`UpdatePopupCurrentDpi ${device._device_serial}`);
+                for (let j = 0; j < this._device_popup_menus.length; ++j) {
+                    let device_popup_menu = this._device_popup_menus[j];
                     if (device_popup_menu._device === null) continue;
                     if (device_popup_menu._device._device_serial === device._device_serial) {
                         device_popup_menu.UpdateCurrentDpi(device_popup_menu);
@@ -470,32 +470,32 @@ export const Indicator = GObject.registerClass(
                 }
             }
             catch (error) {
-                panelIndicator.logException(`UpdatePopupCurrentDpi exception ${device} ${error}`);
+                this.logException(`UpdatePopupCurrentDpi exception ${device} ${error}`);
             }
         }
         clearUnpluggedDevices(device_list) {
             //Filter devices that no longer exists.
-            for (let i = 0; i < panelIndicator._devices.length; ++i) {
-                panelIndicator._devices[i]._is_online = false;
+            for (let i = 0; i < this._devices.length; ++i) {
+                this._devices[i]._is_online = false;
                 for (let j = 0; j < device_list.length; ++j) {
-                    if (device_list[j] === panelIndicator._devices[i]._device_serial) {
-                        panelIndicator._devices[i]._is_online = true;
+                    if (device_list[j] === this._devices[i]._device_serial) {
+                        this._devices[i]._is_online = true;
                         break;
                     }
                 }
-                if (panelIndicator._devices[i]._is_online === false) {
-                    panelIndicator.hideUnpluggedDevice(panelIndicator._devices[i]._device_serial);
-                    let default_battery_device_serial = panelIndicator._settings.get_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL);                     
-                    if (panelIndicator._devices[i]._device_serial === default_battery_device_serial) {
-                        panelIndicator._battery_icon.set_gicon(panelIndicator._battery_missing_icon); 
-                        panelIndicator._percentage_label.text = "";
+                if (this._devices[i]._is_online === false) {
+                    this.hideUnpluggedDevice(this._devices[i]._device_serial);
+                    let default_battery_device_serial = this._settings.get_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL);                     
+                    if (this._devices[i]._device_serial === default_battery_device_serial) {
+                        this._battery_icon.set_gicon(this._battery_missing_icon); 
+                        this._percentage_label.text = "";
                     }
                 }                    
             }
         }
         hideUnpluggedDevice(device_serial) {
-            for (let i = 0; i < panelIndicator._device_popup_menus.length; ++i) {
-                let device_popup_menu = panelIndicator._device_popup_menus[i];
+            for (let i = 0; i < this._device_popup_menus.length; ++i) {
+                let device_popup_menu = this._device_popup_menus[i];
                 if (device_popup_menu._device !== null &&
                     device_popup_menu._device._device_serial === device_serial) {
 
@@ -509,7 +509,7 @@ export const Indicator = GObject.registerClass(
             //Check if the active devices in settings are connected. If it is not, clear active devices.
             
             //Default battery device
-            let default_battery_device_serial = panelIndicator._settings.get_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL);                        
+            let default_battery_device_serial = this._settings.get_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL);                        
             if (!Utils.isEmptyString(default_battery_device_serial)) {
                 let fFound = false;
                 for (let i = 0; i < device_list.length; ++i) {
@@ -519,10 +519,10 @@ export const Indicator = GObject.registerClass(
                     }
                 }
                 if (!fFound) //Default Power mouse is NOT plugged in. Clean it up. It will be auto filled at onPowerStatus
-                    panelIndicator._settings.set_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL, "");
+                    this._settings.set_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL, "");
             }
             //Default dpi device            
-            let default_dpi_device_serial = panelIndicator._settings.get_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL);
+            let default_dpi_device_serial = this._settings.get_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL);
             if (!Utils.isEmptyString(default_dpi_device_serial)) { //If there is a default dpi device.
                 let fFound = false;
                 for (let i = 0; i < device_list.length; ++i) { //Check if it is plugged in.
@@ -532,46 +532,46 @@ export const Indicator = GObject.registerClass(
                     }
                 }
                 if (!fFound) //Default DPI mouse is NOT plugged in. Clean it up. It will be auto filled at onDeviceType
-                    panelIndicator._settings.set_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL, "");
+                    this._settings.set_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL, "");
             }
         }
         LogState(title) {
-            for (let i = 0; i < panelIndicator._devices.length; ++i) {
-                let dev = panelIndicator._devices[i];
-                panelIndicator.logDevelopment(`LogState ${title} [${dev._device_serial}] [${dev._device_name}] power:[${dev._power_level}] is_charging:[${dev._is_charging}] dpis:[${dev._onboard_dpis}]`);
+            for (let i = 0; i < this._devices.length; ++i) {
+                let dev = this._devices[i];
+                this.logDevelopment(`LogState ${title} [${dev._device_serial}] [${dev._device_name}] power:[${dev._power_level}] is_charging:[${dev._is_charging}] dpis:[${dev._onboard_dpis}]`);
             }
         }
         updateToolTip() {
-            let show_tooltip = panelIndicator._settings.get_boolean(Constants.SCHEMA_SHOW_HOVER_POWER);
-            panelIndicator._tooltip.text = "";
+            let show_tooltip = this._settings.get_boolean(Constants.SCHEMA_SHOW_HOVER_POWER);
+            this._tooltip.text = "";
             if (!show_tooltip) return;
             
-            let device = panelIndicator.getDefaultPowerDevice();                                          
+            let device = this.getDefaultPowerDevice();                                          
             if (device === null) return;
 
             let truncated = Math.trunc(device._power_level);
-            panelIndicator._tooltip.text = `${device._device_name}\n${truncated}%`;
-            if (device._is_charging === true) panelIndicator._tooltip.text += " Charging";
+            truncated._tooltip.text = `${device._device_name}\n${truncated}%`;
+            if (device._is_charging === true) truncated._tooltip.text += " Charging";
         }
         showTooltip() {
-            panelIndicator.updateToolTip();
+            this.updateToolTip();
 
-            if (Utils.isEmptyString(panelIndicator._tooltip.text)) {
-                panelIndicator.hideTooltip();
+            if (Utils.isEmptyString(this._tooltip.text)) {
+                this.hideTooltip();
                 return;
             };
-            panelIndicator._tooltip.opacity = 0;
-            panelIndicator._tooltip.show();
+            this._tooltip.opacity = 0;
+            this._tooltip.show();
 
-            let [stageX, stageY] = panelIndicator.get_transformed_position();
+            let [stageX, stageY] = this.get_transformed_position();
 
-            let itemWidth = panelIndicator.allocation.x2 - panelIndicator.allocation.x1;
-            let tooltipWidth = panelIndicator._tooltip.get_width();
+            let itemWidth = this.allocation.x2 - this.allocation.x1;
+            let tooltipWidth = this._tooltip.get_width();
 
             let y = stageY + 40;
             let x = Math.floor(stageX + itemWidth / 2 - tooltipWidth / 2);
 
-            let parent = panelIndicator._tooltip.get_parent();
+            let parent = this._tooltip.get_parent();
             let parentWidth = parent.allocation.x2 - parent.allocation.x1;
 
             if (Clutter.get_default_text_direction() === Clutter.TextDirection.LTR) {
@@ -585,25 +585,25 @@ export const Indicator = GObject.registerClass(
                 x = Math.min(x, parentWidth - tooltipWidth - 6);
             }
 
-            panelIndicator._tooltip.set_position(x, y);
-            panelIndicator._tooltip.remove_all_transitions();
-            panelIndicator._tooltip.ease({
+            this._tooltip.set_position(x, y);
+            this._tooltip.remove_all_transitions();
+            this._tooltip.ease({
                 opacity: 255,
                 duration: 500,
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD
             });
         }
         hideTooltip() {
-            if (panelIndicator._tooltip === null)
+            if (this._tooltip === null)
                 return;
-            panelIndicator._tooltip.opacity = 255;
+            this._tooltip.opacity = 255;
 
-            panelIndicator._tooltip.remove_all_transitions();
-            panelIndicator._tooltip.ease({
+            this._tooltip.remove_all_transitions();
+            this._tooltip.ease({
                 opacity: 0,
                 duration: 500,
                 mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-                onComplete: () => panelIndicator._tooltip.hide()
+                onComplete: () => this._tooltip.hide()
             });
         }
         logException(message) {
@@ -613,59 +613,54 @@ export const Indicator = GObject.registerClass(
             if (Constants.LOG_DEVELOPMENT_ENABLED)
                 console.error(message);
         }
-        cleanup() {
+        destroy() {
             //Timer
-            GLib.Source.remove(panelIndicator._repeat_timer);
-            panelIndicator._repeat_timer = null;
+            GLib.Source.remove(this._repeat_timer);
+            this._repeat_timer = null;
 
             //Event handlers
-            panelIndicator.disconnect(panelIndicator._handler_enter_event);
-            panelIndicator.disconnect(panelIndicator._handler_exit_event);
-            panelIndicator._settingsMenuItem.disconnect(panelIndicator._handler_settings_menu_activate);
-            panelIndicator._settings.disconnect(panelIndicator._handler_power_per_change);
-            panelIndicator._settings.disconnect(panelIndicator._handler_font_size_change);
+            this.disconnect(this._handler_enter_event);
+            this.disconnect(this._handler_exit_event);
+            this._settingsMenuItem.disconnect(this._handler_settings_menu_activate);
+            this._settings.disconnect(this._handler_power_per_change);
+            this._settings.disconnect(this._handler_font_size_change);
 
-            panelIndicator._handler_enter_event = null;
-            panelIndicator._handler_exit_event = null;
-            panelIndicator._handler_settings_menu_activate = null;
-            panelIndicator._handler_power_per_change = null;
-            panelIndicator._handler_font_size_change = null;
+            this._handler_enter_event = null;
+            this._handler_exit_event = null;
+            this._handler_settings_menu_activate = null;
+            this._handler_power_per_change = null;
+            this._handler_font_size_change = null;
 
-            //Widgets
-            panelIndicator._battery_icon?.destroy();
-            panelIndicator._battery_icon = null;
-            panelIndicator._tooltip?.destroy();
-            panelIndicator._tooltip = null;
-            panelIndicator._info_box?.destroy();
-            panelIndicator._info_box = null;
-            panelIndicator._percentage_label?.destroy();
-            panelIndicator._percentage_label = null;
+            //Widgets            
+            this._battery_icon = null;
+            this._tooltip = null;
+            this._info_box = null;
+            this._percentage_label = null;
 
-            for (let i = 0; i < panelIndicator._device_popup_menus.length; ++i) {
-                panelIndicator._device_popup_menus[i]?.destroy();
-                panelIndicator._device_popup_menus[i] = null;
+            for (let i = 0; i < this._device_popup_menus.length; ++i) {                
+                this._device_popup_menus[i] = null;
             }
-            panelIndicator._device_popup_menus = [];
-            panelIndicator._device_popup_menus = null;
-            panelIndicator._settingsMenuItem?.destroy();
-            panelIndicator._settingsMenuItem = null;
+            this._device_popup_menus = [];
+            this._device_popup_menus = null;
+            this._settingsMenuItem = null;
 
             //Other
-            panelIndicator._devices = [];
-            panelIndicator._devices = null;            
-            panelIndicator._razer_dbus = null;
-            panelIndicator._battery_missing_icon = null;
+            this._devices = [];
+            this._devices = null;            
+            this._razer_dbus = null;
+            this._battery_missing_icon = null;
 
-            panelIndicator._battery_full_icon = null;
-            panelIndicator._battery_good_icon = null;
-            panelIndicator._battery_low_icon = null;
-            panelIndicator._battery_empty_icon = null;
-            panelIndicator._battery_idle_icon = null;
+            this._battery_full_icon = null;
+            this._battery_good_icon = null;
+            this._battery_low_icon = null;
+            this._battery_empty_icon = null;
+            this._battery_idle_icon = null;
 
-            panelIndicator._battery_charging_full_icon = null;
-            panelIndicator._battery_charging_good_icon = null;
-            panelIndicator._battery_charging_low_icon = null;
-            panelIndicator._battery_charging_empty_icon = null;
+            this._battery_charging_full_icon = null;
+            this._battery_charging_good_icon = null;
+            this._battery_charging_low_icon = null;
+            this._battery_charging_empty_icon = null;
+            super.destroy();
         }
     });
 

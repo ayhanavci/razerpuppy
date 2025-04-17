@@ -6,22 +6,20 @@ import * as Constants from "./constants.js";
 import { gettext as _, } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 import * as RazerDbusHandler from './razerdbushandler.js'    
 import * as Utils from "./utils.js";
-let razerpuppyPrefs = null;
-let settingsPowerPage = null;
+
 
 export const PowerPageHandler = class OptionsPageHandler {
-    constructor(_razerpuppyPrefs) {
-        razerpuppyPrefs = _razerpuppyPrefs;
+    constructor(razerpuppyPrefs) {
+        this._razerpuppyPrefs = razerpuppyPrefs;
         this._window = razerpuppyPrefs._window;
         this._settings = razerpuppyPrefs.getSettings();
-        settingsPowerPage = this;
     }
    
     createPage() {
         this._powerPage = new Adw.PreferencesPage();
         this._powerPage.title = _("Power");
         this._powerPage.icon_name = Constants.ICON_POWER;        
-        settingsPowerPage._razer_dbus = new RazerDbusHandler.RazerDbusHandler();
+        this._razer_dbus = new RazerDbusHandler.RazerDbusHandler();
         this._window.add(this._powerPage);
         this._deviceListGroup = new Adw.PreferencesGroup({title: _("Set a device to default to show its battery on tray")});
         this._powerPage.add(this._deviceListGroup);
@@ -96,9 +94,9 @@ export const PowerPageHandler = class OptionsPageHandler {
         this._optionsGroup.add(this._font_size_spin);
 
         this._font_size_spin.connect("notify::value", () => {                
-            settingsPowerPage._settings.set_uint(
+            this._settings.set_uint(
                 Constants.SCHEMA_PERCENTAGE_FONT_SIZE,
-                settingsPowerPage._font_size_spin.get_value()
+                this._font_size_spin.get_value()
             );
         });
 
@@ -113,85 +111,85 @@ export const PowerPageHandler = class OptionsPageHandler {
         this._settings.bind(Constants.SCHEMA_SHOW_HOVER_POWER, this._show_hover_power, 'active', Gio.SettingsBindFlags.DEFAULT);        
 
         this._dropdowndevices.connect("notify::selected-item", (_dropdown, _spec) => {
-            let device = settingsPowerPage.getSelectedDevice();
+            let device = this.getSelectedDevice();
             if (device !== null) {
-                settingsPowerPage._razer_dbus.GetIdleTime(device._device_serial,
-                    settingsPowerPage.onGetIdleTime,
-                    settingsPowerPage.onGetIdleTimeError
+                this._razer_dbus.GetIdleTime(device._device_serial,
+                    this.onGetIdleTime.bind(this),
+                    this.onGetIdleTimeError.bind(this)
                 );
-                settingsPowerPage._razer_dbus.GetLowBatteryThreshold(device._device_serial,
-                    settingsPowerPage.onGetLowBatteryThreshold,
-                    settingsPowerPage.onGetLowBatteryThresholdError
+                this._razer_dbus.GetLowBatteryThreshold(device._device_serial,
+                    this.onGetLowBatteryThreshold.bind(this),
+                    this.onGetLowBatteryThresholdError.bind(this)
                 );
             }
         });
 
         this._enter_low_power_scale.connect("value-changed", () => {                
-            let device = settingsPowerPage.getSelectedDevice();
+            let device = this.getSelectedDevice();
             if (device === null) return; 
-                settingsPowerPage._razer_dbus.SetLowBatteryThreshold(
+                this._razer_dbus.SetLowBatteryThreshold(
                     device._device_serial,                    
                     this._enter_low_power_scale.get_value()
             );
         });
         this._sleep_after_scale.connect("value-changed", () => {                
-            let device = settingsPowerPage.getSelectedDevice();
+            let device = this.getSelectedDevice();
             if (device === null) return; 
-                settingsPowerPage._razer_dbus.SetIdleTime(
+                this._razer_dbus.SetIdleTime(
                     device._device_serial,                    
                     this._sleep_after_scale.get_value() * 60
             );
         });
     }
-    onDeviceName(device) {        
+    onDeviceName(power_page, device) {        
         try {
-            razerpuppyPrefs.logDevelopment(`Power Page Device ${device._device_serial} has battery: ${device._has_get_battery_method}`);
+            power_page._razerpuppyPrefs.logDevelopment(`Power Page Device ${device._device_serial} has battery: ${device._has_get_battery_method}`);
             if (!device._has_get_battery_method) return;            
 
-            let position = settingsPowerPage._combo_strings.length;
-            settingsPowerPage._combo_strings.append(device._device_name);
+            let position = power_page._combo_strings.length;
+            power_page._combo_strings.append(device._device_name);
 
-            let power_default_serial = settingsPowerPage._settings.get_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL);
+            let power_default_serial = power_page._settings.get_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL);
             if (Utils.isEmptyString(power_default_serial)) {
-                settingsPowerPage._settings.set_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL, device._device_serial);
-                settingsPowerPage._dropdowndevices.set_selected(position);
+                power_page._settings.set_string(Constants.SCHEMA_BATTERY_DEVICE_SERIAL, device._device_serial);
+                power_page._dropdowndevices.set_selected(position);
             }
             else if (power_default_serial === device._device_serial)  
-                settingsPowerPage._dropdowndevices.set_selected(position);
+                power_page._dropdowndevices.set_selected(position);
         }
         catch (error) {
-            razerpuppyPrefs.logDevelopment(`Power Page Device EXCEPTION ${error}`);
+            power_page._razerpuppyPrefs.logException(`Power Page Device EXCEPTION ${error}`);
         }
         
 
     }
-    onDeviceType(_device) {        
+    onDeviceType(_power_page, _device) {        
         
     }
     onGetIdleTime(device_serial, idle_time) {
-        razerpuppyPrefs.logDevelopment(`Power Page onGetIdleTime ${device_serial}  ${idle_time}`);
-        settingsPowerPage._sleep_after_scale.set_value(idle_time / 60);
+        this._razerpuppyPrefs.logDevelopment(`Power Page onGetIdleTime ${device_serial}  ${idle_time}`);
+        this._sleep_after_scale.set_value(idle_time / 60);
     }
     onGetIdleTimeError(device_serial, error) {
-        razerpuppyPrefs.logException(`Power Page onGetIdleTime ERROR ${device_serial}  ${error}`);
+        this._razerpuppyPrefs.logException(`Power Page onGetIdleTime ERROR ${device_serial}  ${error}`);
     }
     onGetLowBatteryThreshold(device_serial, treshold) {
-        razerpuppyPrefs.logDevelopment(`Power Page onGetLowBatteryThreshold ${device_serial}  ${treshold}`);
-        settingsPowerPage._enter_low_power_scale.set_value(treshold);
+        this._razerpuppyPrefs.logDevelopment(`Power Page onGetLowBatteryThreshold ${device_serial}  ${treshold}`);
+        this._enter_low_power_scale.set_value(treshold);
     }
     onGetLowBatteryThresholdError(device_serial, error) {
-        razerpuppyPrefs.logException(`Power Page onGetLowBatteryThresholdError ERROR ${device_serial}  ${error}`);
+        this._razerpuppyPrefs.logException(`Power Page onGetLowBatteryThresholdError ERROR ${device_serial}  ${error}`);
     }
     getSelectedDeviceName() {
-        let selected_item = settingsPowerPage._dropdowndevices.get_selected_item();
+        let selected_item = this._dropdowndevices.get_selected_item();
         if (selected_item === null)
             return null;
         return selected_item.get_string();
     }
     getSelectedDevice() {
-        let selected_device_name = settingsPowerPage.getSelectedDeviceName();
+        let selected_device_name = this.getSelectedDeviceName();
         if (selected_device_name === null) return null;
-        return razerpuppyPrefs.getDetectedDeviceByName(selected_device_name);
+        return this._razerpuppyPrefs.getDetectedDeviceByName(selected_device_name);
     }
 
 }

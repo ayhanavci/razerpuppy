@@ -5,18 +5,14 @@ import * as Constants from "./constants.js";
 import { gettext as _, } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 import * as RazerDbusHandler from './razerdbushandler.js'
     
-let logoRgbPage = null;
-let razerpuppyPrefs = null;
 export const LogoRgbPageHandler = class AboutPageHandler {
-    constructor(_razerpuppyPrefs) {
-        razerpuppyPrefs = _razerpuppyPrefs;
+    constructor(razerpuppyPrefs) {
+        this._razerpuppyPrefs = razerpuppyPrefs;
         this._window = razerpuppyPrefs._window;
-        this._schema = razerpuppyPrefs.getSettings();
-        logoRgbPage = this;
-        logoRgbPage._razer_dbus = new RazerDbusHandler.RazerDbusHandler();
-    }
-   
+        this._schema = razerpuppyPrefs.getSettings();      
+    }   
     createPage() {
+        this._razer_dbus = new RazerDbusHandler.RazerDbusHandler();        
         this._logoRgbPrefPage = new Adw.PreferencesPage();
         this._logoRgbPrefPage.title = _("Logo RGB");
         this._logoRgbPrefPage.icon_name = Constants.ICON_LOGO_RGB;
@@ -88,19 +84,20 @@ export const LogoRgbPageHandler = class AboutPageHandler {
         this._logoRgbGroup.hide();
         
         this._dropdowndevices.connect("notify::selected-item", (_dropdown, _spec) => {
-            let device = logoRgbPage.getSelectedDevice();
+            let device = this.getSelectedDevice();
             if (device !== null) {                                
-                let effect_index = logoRgbPage.findIndexOfEffect(device._effect);
+                let effect_index = this.findIndexOfEffect(device._effect);
                 //console.error(`SELECTION CHANGE ${device._color1[0]} ${device._color1[1]} ${device._color1[2]} - ${device._color2[0]} ${device._color2[1]} ${device._color2[2]} effect:${device._effect} index:${effect_index}`)
-                logoRgbPage._dropdowneffects.set_selected(effect_index);
-                logoRgbPage.showHideColorPickers(effect_index);
-                logoRgbPage._brightness_scale.set_value(device._brightness);
-                logoRgbPage._pick_color_button1.set_rgba(new Gdk.RGBA({ 
+                this._dropdowneffects.set_selected(effect_index);
+                this.showHideColorPickers(effect_index);
+                this._brightness_scale.set_value(device._brightness);
+                
+                this._pick_color_button1.set_rgba(new Gdk.RGBA({ 
                     red: device._color1[0] / 255, 
                     green: device._color1[1] / 255, 
                     blue: device._color1[2] / 255, 
                     alpha: 1.0 }));
-                logoRgbPage._pick_color_button2.set_rgba(new Gdk.RGBA({ 
+                this._pick_color_button2.set_rgba(new Gdk.RGBA({ 
                     red: device._color2[0] / 255, 
                     green: device._color2[1] / 255, 
                     blue: device._color2[2] / 255, 
@@ -109,21 +106,21 @@ export const LogoRgbPageHandler = class AboutPageHandler {
             }
         });
         this._dropdowneffects.connect("notify::selected-item", (_dropdown, _spec) => {     
-            logoRgbPage.changeLightingEffect();              
+            this.changeLightingEffect();              
         });
         this._pick_color_button1.connect("notify::rgba", (_button, _spec) => {     
-            logoRgbPage.changeLightingEffect();
+            this.changeLightingEffect();
         });
         this._pick_color_button2.connect("notify::rgba", (_button, _spec) => {     
-            logoRgbPage.changeLightingEffect();
+            this.changeLightingEffect();
         });
         this._brightness_scale.connect("value-changed", () => {                
-            let device = logoRgbPage.getSelectedDevice();
+            let device = this.getSelectedDevice();
             if (device === null) return; 
-            logoRgbPage._razer_dbus.SetLogoBrightness(
+            this._razer_dbus.SetLogoBrightness(
                 device._device_serial,
-                logoRgbPage.onLogoBrightness,
-                logoRgbPage.onLogoBrightnessError,
+                this.onLogoBrightness,
+                this.onLogoBrightnessError,
                 this._brightness_scale.get_value()
             );
         });
@@ -141,114 +138,114 @@ export const LogoRgbPageHandler = class AboutPageHandler {
     }
     showHideColorPickers(effect_index) {        
         if (effect_index === 0) {//None
-            logoRgbPage._pick_color_button1.hide();
-            logoRgbPage._pick_color_button2.hide();
+            this._pick_color_button1.hide();
+            this._pick_color_button2.hide();
         }         
         else if (effect_index === 1) {//static
-            logoRgbPage._pick_color_button1.show();
-            logoRgbPage._pick_color_button2.hide();
+            this._pick_color_button1.show();
+            this._pick_color_button2.hide();
         }
         else if (effect_index === 2) {//breathe single
-            logoRgbPage._pick_color_button1.show();
-            logoRgbPage._pick_color_button2.hide();
+            this._pick_color_button1.show();
+            this._pick_color_button2.hide();
         }
         else if (effect_index === 3) {//breathe dual
-            logoRgbPage._pick_color_button1.show();
-            logoRgbPage._pick_color_button2.show();
+            this._pick_color_button1.show();
+            this._pick_color_button2.show();
         }
         else if (effect_index === 4) {//breathe random
-            logoRgbPage._pick_color_button1.hide();
-            logoRgbPage._pick_color_button2.hide();
+            this._pick_color_button1.hide();
+            this._pick_color_button2.hide();
         }
         else if (effect_index === 5) {//spectrum
-            logoRgbPage._pick_color_button1.hide();
-            logoRgbPage._pick_color_button2.hide();                        
+            this._pick_color_button1.hide();
+            this._pick_color_button2.hide();                        
         }
         else if (effect_index === 6) {//reactive
-            logoRgbPage._pick_color_button1.show();
-            logoRgbPage._pick_color_button2.hide();
+            this._pick_color_button1.show();
+            this._pick_color_button2.hide();
         }
     }
     changeLightingEffect() { 
-        let device = logoRgbPage.getSelectedDevice();
+        let device = this.getSelectedDevice();
         if (device === null) return;
-        let effect_index = logoRgbPage._dropdowneffects.get_selected();
-        logoRgbPage.showHideColorPickers(effect_index);        
+        let effect_index = this._dropdowneffects.get_selected();
+        this.showHideColorPickers(effect_index);        
         console.error(`changeLightingEffect ${device._device_serial} ${effect_index}`);      
         if (effect_index === 0) {//None
-            logoRgbPage._razer_dbus.SetLogoNone(
+            this._razer_dbus.SetLogoNone(
                 device._device_serial,
-                logoRgbPage.onLogoNone,
-                logoRgbPage.onLogoNoneError
+                this.onLogoNone.bind(this),
+                this.onLogoNoneError.bind(this)
             );
         }         
         else if (effect_index === 1) {//static
-            let color1_rgba = logoRgbPage._pick_color_button1.get_rgba();
+            let color1_rgba = this._pick_color_button1.get_rgba();
             
-            logoRgbPage._razer_dbus.SetLogoStatic(
+            this._razer_dbus.SetLogoStatic(
                 device._device_serial,
-                logoRgbPage.onLogoStatic,
-                logoRgbPage.onLogoStaticError,
+                this.onLogoStatic.bind(this),
+                this.onLogoStaticError.bind(this),
                 color1_rgba.red * 255, color1_rgba.green * 255, color1_rgba.blue * 255,                
             );
         }
         else if (effect_index === 2) {//breathe single
-            let color1_rgba = logoRgbPage._pick_color_button1.get_rgba();
+            let color1_rgba = this._pick_color_button1.get_rgba();
             
-            logoRgbPage._razer_dbus.SetLogoBreathSingle(
+            this._razer_dbus.SetLogoBreathSingle(
                 device._device_serial,
-                logoRgbPage.onLogoBreathSingle,
-                logoRgbPage.onLogoBreatSingleError,
+                this.onLogoBreathSingle.bind(this),
+                this.onLogoBreathSingleError.bind(this),
                 color1_rgba.red * 255, color1_rgba.green * 255, color1_rgba.blue * 255,                
             );
         }
         else if (effect_index === 3) {//breathe dual
-            let color1_rgba = logoRgbPage._pick_color_button1.get_rgba();
-            let color2_rgba = logoRgbPage._pick_color_button2.get_rgba();
+            let color1_rgba = this._pick_color_button1.get_rgba();
+            let color2_rgba = this._pick_color_button2.get_rgba();
             
-            logoRgbPage._razer_dbus.SetLogoBreathDual(
+            this._razer_dbus.SetLogoBreathDual(
                 device._device_serial,
-                logoRgbPage.onLogoBreathDual,
-                logoRgbPage.onLogoBreathDualError,
+                this.onLogoBreathDual.bind(this),
+                this.onLogoBreathDualError.bind(this),
                 color1_rgba.red * 255, color1_rgba.green * 255, color1_rgba.blue * 255,
                 color2_rgba.red * 255, color2_rgba.green * 255 , color2_rgba.blue * 255
             );
         }
         else if (effect_index === 4) {//breathe random
-            logoRgbPage._razer_dbus.SetLogoBreathRandom(
+            this._razer_dbus.SetLogoBreathRandom(
                 device._device_serial,
-                logoRgbPage.onLogoBreathRandom,
-                logoRgbPage.onLogoBreathRandomError
+                this.onLogoBreathRandom.bind(this),
+                this.onLogoBreathRandomError.bind(this)
             );
         }
         else if (effect_index === 5) {//spectrum
-            logoRgbPage._razer_dbus.SetLogoSpectrum(
+            this._razer_dbus.SetLogoSpectrum(
                 device._device_serial,
-                logoRgbPage.onLogoSpectrum,
-                logoRgbPage.onLogoSpectrumError
+                this.onLogoSpectrum.bind(this),
+                this.onLogoSpectrumError.bind(this)
             );                    
         }
         else if (effect_index === 6) {//reactive
-            let color1_rgba = logoRgbPage._pick_color_button1.get_rgba();
+            let color1_rgba = this._pick_color_button1.get_rgba();
             
-            logoRgbPage._razer_dbus.SetLogoReactive(
+            this._razer_dbus.SetLogoReactive(
                 device._device_serial,
-                logoRgbPage.onLogoReactive,
-                logoRgbPage.onLogoReactiveError,
+                this.onLogoReactive.bind(this),
+                this.onLogoReactiveError.bind(this),
                 color1_rgba.red * 255, color1_rgba.green * 255, color1_rgba.blue * 255, 255               
             );
         }
     }
     getSelectedDeviceName() {
-        let selected_item = logoRgbPage._dropdowndevices.get_selected_item();
+        let selected_item = this._dropdowndevices.get_selected_item();
         if (selected_item === null)
             return null;
         return selected_item.get_string();
     }
     getSelectedDevice() {
-        let selected_device_name = logoRgbPage.getSelectedDeviceName();
+        let selected_device_name = this.getSelectedDeviceName();
         if (selected_device_name === null) return null;
-        return razerpuppyPrefs.getDetectedDeviceByName(selected_device_name);
+        return this._razerpuppyPrefs.getDetectedDeviceByName(selected_device_name);
     }
     onLogoBreathDual(device_serial) {
         console.error(`onLogoBreathDual ${device_serial}`);
@@ -302,7 +299,7 @@ export const LogoRgbPageHandler = class AboutPageHandler {
         console.error(`RGB Page Device ${device._device_serial} has battery: ${device._has_get_logo_effect_method}`);
         if (!device._has_get_logo_effect_method) return;
         
-        logoRgbPage._combo_strings.append(device._device_name);   
+        this._combo_strings.append(device._device_name);   
 
         this._logoRgbGroup.show();     
     }

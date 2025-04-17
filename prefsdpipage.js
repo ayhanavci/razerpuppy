@@ -7,15 +7,11 @@ import * as ShortCutButton from './shortcutButton.js'
 import * as Utils from "./utils.js";
 import * as RazerDbusHandler from './razerdbushandler.js'
 
-let razerpuppyPrefs = null;
-let settingsDpiPage = null;
-
 export const DpiPageHandler = class DpiPageHandler {
-    constructor(_razerpuppyPrefs) {
-        razerpuppyPrefs = _razerpuppyPrefs;
+    constructor(razerpuppyPrefs) {
+        this._razerpuppyPrefs = razerpuppyPrefs;
         this._window = razerpuppyPrefs._window;
         this._settings = razerpuppyPrefs.getSettings();
-        settingsDpiPage = this;
     }
    
     createPage() {
@@ -57,12 +53,12 @@ export const DpiPageHandler = class DpiPageHandler {
             hhomogeneous: false,
         });
         this._handler_dpi_key = this._settings.connect("changed::dpi-keybinding", () => {
-            settingsDpiPage._shortcut_button.keybinding = settingsDpiPage._window.settings.get_strv("dpi-keybinding")[0];
+            this._shortcut_button.keybinding = this._window.settings.get_strv("dpi-keybinding")[0];
         });
         this._shortcut_button.keybinding = this._settings.get_strv("dpi-keybinding")[0];
 
         this._handler_shortcut = this._shortcut_button.connect("notify::keybinding", () => {
-            settingsDpiPage._settings.set_strv("dpi-keybinding", [settingsDpiPage._shortcut_button.keybinding]);
+            this._settings.set_strv("dpi-keybinding", [this._shortcut_button.keybinding]);
         });
 
         //ROW
@@ -79,7 +75,7 @@ export const DpiPageHandler = class DpiPageHandler {
         this._dpiGroup = new Adw.PreferencesGroup();
         this._settingsPage.add(this._dpiGroup);
 
-        settingsDpiPage._dpiGroup.add(this._row_shortcut);        
+        this._dpiGroup.add(this._row_shortcut);        
 
         this._dpiSpinsGroup = new Adw.PreferencesGroup();
 
@@ -157,31 +153,23 @@ export const DpiPageHandler = class DpiPageHandler {
 
     }
     getSelectedDeviceName() {
-        let selected_item = settingsDpiPage._dropdowndevices.get_selected_item();
+        let selected_item = this._dropdowndevices.get_selected_item();
         if (selected_item === null)
             return null;
         return selected_item.get_string();
     }
     setEventHandlers() {
         this._handler_devices_change = this._dropdowndevices.connect("notify::selected-item", (_dropdown, _spec) => {            
-            let device = settingsDpiPage.getSelectedDevice();
+            let device = this.getSelectedDevice();
             if (device !== null) {
-                settingsDpiPage._razer_dbus.GetPollRate(device._device_serial,
-                    settingsDpiPage.onGetPollRate,
-                    settingsDpiPage.onGetPollRateError
+                this._razer_dbus.GetPollRate(device._device_serial,
+                    this.onGetPollRate.bind(this),
+                    this.onGetPollRateError.bind(this)
                 );
-                /*if (device._onboard_dpis !== null) {
-                    let dpis = device._onboard_dpis;
-                    let dpi_stages_text = _("On Board DPI: ");
-                    for (let index = 0; index < dpis.length; ++index) {
-                        let stage = dpis[index];
-                        dpi_stages_text += stage.toString();
-                        dpi_stages_text += " ";
-                    }                    
-                }*/
+               
                 if (device._max_dpi > 0) {                    
-                    settingsDpiPage._dpiSpinsGroup.description = _("Max DPI: ") + device._max_dpi.toString();
-                    settingsDpiPage.LoadDdpisToSpins(device);
+                    this._dpiSpinsGroup.description = _("Max DPI: ") + device._max_dpi.toString();
+                    this.LoadDdpisToSpins(device);
                 }                
             }
         });
@@ -189,20 +177,20 @@ export const DpiPageHandler = class DpiPageHandler {
         this._handler_set_battery_device_button_click = this._set_default_device_button.connect('clicked', () => this.onSetDefaultDevice());
 
         this._handler_set_save_button_click = this._set_save_button.connect('clicked', () => {
-            let device = settingsDpiPage.getSelectedDevice();            
+            let device = this.getSelectedDevice();            
             if (device === null) return;
             let new_dpis = [];
-            for (let j = 0; j < settingsDpiPage._dpi_spins.length; ++j) {
-                let dpi = settingsDpiPage._dpi_spins[j].get_value();
+            for (let j = 0; j < this._dpi_spins.length; ++j) {
+                let dpi = this._dpi_spins[j].get_value();
                 new_dpis.push([dpi, dpi]);            
             }
                 
-            settingsDpiPage.updateOnboardDpi(device, new_dpis);
+            this.updateOnboardDpi(device, new_dpis);
         });
         this._handler_pollrate = this._dropdownpollrates.connect("notify::selected-item", (_dropdown, _spec) => {            
-            let device = settingsDpiPage.getSelectedDevice();
+            let device = this.getSelectedDevice();
             if (device === null) return;
-            let poll_index = settingsDpiPage._dropdownpollrates.get_selected();
+            let poll_index = this._dropdownpollrates.get_selected();
             let poll_rate = -1;
             switch (poll_index) {
                 case 0:
@@ -217,7 +205,7 @@ export const DpiPageHandler = class DpiPageHandler {
                     poll_rate = 8000; break;
             }
             if (poll_rate === -1) return;
-            settingsDpiPage._razer_dbus.SetPollRate(device._device_serial, poll_rate);                            
+            this._razer_dbus.SetPollRate(device._device_serial, poll_rate);                            
         });
     }
     async updateOnboardDpi(device, new_dpis) {
@@ -225,23 +213,24 @@ export const DpiPageHandler = class DpiPageHandler {
             let active_stage = 5;           
             let razer_dbus = new RazerDbusHandler.RazerDbusHandler();
             await razer_dbus.SetDpiStages(device._device_serial, active_stage, new_dpis);
-            razerpuppyPrefs._razer_dbus.GetDpiStages(device._device_serial, razerpuppyPrefs.onRefreshDpiStages, razerpuppyPrefs.onGetDpiStagesError);
+            this._razerpuppyPrefs._razer_dbus.GetDpiStages(device._device_serial, 
+                this._razerpuppyPrefs.onRefreshDpiStages.bind(this._razerpuppyPrefs), 
+                this._razerpuppyPrefs.onGetDpiStagesError.bind(this._razerpuppyPrefs));
         }
         catch (e) {
-            razerpuppyPrefs.logException(`updateOnboardDpi ${device._device_serial} ${e}`);
+            this._razerpuppyPrefs.logException(`updateOnboardDpi ${device._device_serial} ${e}`);
         }
 
     }
     getSelectedDevice() {
-        let selected_device_name = settingsDpiPage.getSelectedDeviceName();
-        if (selected_device_name === null)
-            return null;
-        return razerpuppyPrefs.getDetectedDeviceByName(selected_device_name);
+        let selected_device_name = this.getSelectedDeviceName();
+        if (selected_device_name === null) return null;
+        return this._razerpuppyPrefs.getDetectedDeviceByName(selected_device_name);
     }
 
     LoadDdpisToSpins(device) {       
-        for (let i = 0; i < settingsDpiPage._dpi_spins.length; ++i) {
-            let spin = settingsDpiPage._dpi_spins[i];
+        for (let i = 0; i < this._dpi_spins.length; ++i) {
+            let spin = this._dpi_spins[i];
 
             if (device._onboard_dpis !== null && device._onboard_dpis[i] !== null && device._onboard_dpis[i] !== undefined) 
                 spin.set_value(device._onboard_dpis[i]);
@@ -250,55 +239,55 @@ export const DpiPageHandler = class DpiPageHandler {
         }        
     }
     onGetPollRate(device_serial, poll_rate) {
-        razerpuppyPrefs.logDevelopment(`Dpi Page onGetPollRate ${device_serial} Poll rate ${poll_rate}`);
-        let device = razerpuppyPrefs.getDeviceBySerial(device_serial);
+        this._razerpuppyPrefs.logDevelopment(`Dpi Page onGetPollRate ${device_serial} Poll rate ${poll_rate}`);
+        let device = this._razerpuppyPrefs.getDeviceBySerial(device_serial);
         if (device === null) return;        
         if (poll_rate === 125) 
-            settingsDpiPage._dropdownpollrates.set_selected(0);
+            this._dropdownpollrates.set_selected(0);
         else if (poll_rate === 500)
-            settingsDpiPage._dropdownpollrates.set_selected(1);
+            this._dropdownpollrates.set_selected(1);
         else if (poll_rate === 1000)
-            settingsDpiPage._dropdownpollrates.set_selected(2);
+            this._dropdownpollrates.set_selected(2);
         else if (poll_rate === 4000)
-            settingsDpiPage._dropdownpollrates.set_selected(3);
+            this._dropdownpollrates.set_selected(3);
         else if (poll_rate === 8000)
-            settingsDpiPage._dropdownpollrates.set_selected(4);
+            this._dropdownpollrates.set_selected(4);
     }
     onGetPollRateError(device_serial, error) {
-        razerpuppyPrefs.logException(`Dpi Page onGetPollRateError ${device_serial} ${error}`);
+        this._razerpuppyPrefs.logException(`Dpi Page onGetPollRateError ${device_serial} ${error}`);
     }
     onSetDefaultDevice() {
-        razerpuppyPrefs.logDevelopment(`Dpi Page onSetDefaultDevice`);
-        let device = settingsDpiPage.getSelectedDevice();
+        this._razerpuppyPrefs.logDevelopment(`Dpi Page onSetDefaultDevice`);
+        let device = this.getSelectedDevice();
         if (device === null)
             return;
-        razerpuppyPrefs.logDevelopment(`Dpi Page onSetDefaultDevice Setting: ${device._device_serial}`);
-        settingsDpiPage._settings.set_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL, device._device_serial);
+        this._razerpuppyPrefs.logDevelopment(`Dpi Page onSetDefaultDevice Setting: ${device._device_serial}`);
+        this._settings.set_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL, device._device_serial);
     }
-    onDeviceName(_device) {
+    onDeviceName(_dpi_page, _device) {
 
     }
-    onDeviceType(device) {
+    onDeviceType(dpi_page, device) {
         try {
-            razerpuppyPrefs.logDevelopment(`dpi page onDeviceType ${device._device_serial}`);
+            dpi_page._razerpuppyPrefs.logDevelopment(`dpi page onDeviceType ${device._device_serial}`);
             if (device._device_type !== Constants.DEVICE_TYPE_MOUSE) //Not a mouse
                 return;
 
-            let position = settingsDpiPage._combo_strings.get_n_items();
-            settingsDpiPage._combo_strings.append(device._device_name);
+            let position = dpi_page._combo_strings.get_n_items();
+            dpi_page._combo_strings.append(device._device_name);
 
-            let dpi_default_serial = settingsDpiPage._settings.get_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL);            
+            let dpi_default_serial = dpi_page._settings.get_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL);            
             if (Utils.isEmptyString(dpi_default_serial)) {
-                settingsDpiPage._settings.set_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL, device._device_serial);
-                settingsDpiPage._dropdowndevices.set_selected(position);
+                dpi_page._settings.set_string(Constants.SCHEMA_DPI_HOTKEY_DEVICE_SERIAL, device._device_serial);
+                dpi_page._dropdowndevices.set_selected(position);
             }
             else if (dpi_default_serial === device._device_serial) {                
-                settingsDpiPage._dropdowndevices.set_selected(position);
+                dpi_page._dropdowndevices.set_selected(position);
             }
 
         }
         catch (error) {
-            razerpuppyPrefs.logDevelopment(`dpi page onDeviceType EXCEPTION ${error}`);
+            dpi_page._razerpuppyPrefs.logDevelopment(`dpi page onDeviceType EXCEPTION ${error}`);
         }
 
 
@@ -307,23 +296,23 @@ export const DpiPageHandler = class DpiPageHandler {
         
         
     }
-    onRefreshDpiStages(device) {
-        settingsDpiPage.updateSpinners(device);
+    onRefreshDpiStages(thispage, device) {
+        thispage.updateSpinners(device);
     }
-    onGetMaxDpi(device) {
-        let selected_device_name = settingsDpiPage.getSelectedDeviceName();
+    onGetMaxDpi(dpi_page, device) {
+        let selected_device_name = dpi_page.getSelectedDeviceName();
         if (selected_device_name !== null && selected_device_name === device._device_name) {            
-            settingsDpiPage._dpiSpinsGroup.description = _("Max DPI: ") + device._max_dpi.toString();
-            settingsDpiPage.updateSpinners(device); 
+            dpi_page._dpiSpinsGroup.description = _("Max DPI: ") + device._max_dpi.toString();
+            dpi_page.updateSpinners(dpi_page, device); 
         }
         
     }
-    updateSpinners(device) {
-        for (let index = 0; index < settingsDpiPage._dpi_spins.length; ++index) {
-            settingsDpiPage._dpi_spins[index].set_range(100, device._max_dpi);
+    updateSpinners(dpi_page, device) {
+        for (let index = 0; index < dpi_page._dpi_spins.length; ++index) {
+            dpi_page._dpi_spins[index].set_range(100, device._max_dpi);
             let dpi = device._onboard_dpis[index];            
             if (dpi !== null && dpi !== undefined) 
-                settingsDpiPage._dpi_spins[index].set_value(dpi);            
+                dpi_page._dpi_spins[index].set_value(dpi);            
         }  
     }
 }
