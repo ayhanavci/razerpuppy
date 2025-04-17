@@ -16,4 +16,4 @@ export const ICON_LOGO_RGB = "display-brightness-symbolic";
 export const CONFIG_FOLDER_NAME = "razer-puppy";
 export const SETTINGS_FILE_NAME = "devices.json";
 export const DEVICE_TYPE_MOUSE = "mouse";
-export const LOG_DEVELOPMENT_ENABLED = true;
+export const LOG_DEVELOPMENT_ENABLED = false;

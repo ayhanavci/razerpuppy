@@ -80,7 +80,7 @@ export default class RazerPuppyPreferences extends ExtensionPreferences {
       //RGB Logo Interface
       let bus_logo_rgb_interface = bus_info.lookup_interface('razer.device.lighting.logo');
       if (bus_logo_rgb_interface !== null) {
-        console.error(`prefs onIntrospect ${device_serial} found logo rgb interface!`);
+        this.logDevelopment(`prefs onIntrospect ${device_serial} found logo rgb interface!`);
         if (bus_logo_rgb_interface.lookup_method('getLogoEffect') !== null) device._has_get_logo_effect_method = true;
         if (bus_logo_rgb_interface.lookup_method('setLogoStatic') !== null) device._has_logo_static_method = true;
         if (bus_logo_rgb_interface.lookup_method('setLogoSpectrum') !== null) device._has_logo_spectrum_method = true;
@@ -170,7 +170,7 @@ export default class RazerPuppyPreferences extends ExtensionPreferences {
     this.logException(`prefs onLogoEffectColorsError [${device_serial} ${error}]`);
   }
   onDeviceList(device_list) {
-    console.error(`prefs onDeviceList [${device_list}]`);
+    this.logDevelopment(`prefs onDeviceList [${device_list}]`);
     try {
       for (let i = 0; i < device_list.length; ++i) {
         let device_serial = device_list[i];
@@ -317,7 +317,7 @@ export default class RazerPuppyPreferences extends ExtensionPreferences {
         device._onboard_dpis_xy.push([x, y]);
         device._onboard_dpis.push(x);
       }
-      this._dpiPageHandler.onRefreshDpiStages(device);      
+      this._dpiPageHandler.onRefreshDpiStages(this._dpiPageHandler, device);      
     }
     catch (error) {
       this.logException(`prefs onRefreshDpiStages exception [${device_serial}] [${error}]`);

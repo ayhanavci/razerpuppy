@@ -296,8 +296,8 @@ export const DpiPageHandler = class DpiPageHandler {
         
         
     }
-    onRefreshDpiStages(thispage, device) {
-        thispage.updateSpinners(device);
+    onRefreshDpiStages(dpi_page, device) {
+        dpi_page.updateSpinners(dpi_page, device);
     }
     onGetMaxDpi(dpi_page, device) {
         let selected_device_name = dpi_page.getSelectedDeviceName();

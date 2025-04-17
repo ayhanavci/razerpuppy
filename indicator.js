@@ -550,8 +550,8 @@ export const Indicator = GObject.registerClass(
             if (device === null) return;
 
             let truncated = Math.trunc(device._power_level);
-            truncated._tooltip.text = `${device._device_name}\n${truncated}%`;
-            if (device._is_charging === true) truncated._tooltip.text += " Charging";
+            this._tooltip.text = `${device._device_name}\n${truncated}%`;
+            if (device._is_charging === true) this._tooltip.text += " Charging";
         }
         showTooltip() {
             this.updateToolTip();

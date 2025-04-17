@@ -171,7 +171,7 @@ export const LogoRgbPageHandler = class AboutPageHandler {
         if (device === null) return;
         let effect_index = this._dropdowneffects.get_selected();
         this.showHideColorPickers(effect_index);        
-        console.error(`changeLightingEffect ${device._device_serial} ${effect_index}`);      
+        //console.error(`changeLightingEffect ${device._device_serial} ${effect_index}`);      
         if (effect_index === 0) {//None
             this._razer_dbus.SetLogoNone(
                 device._device_serial,
@@ -247,56 +247,48 @@ export const LogoRgbPageHandler = class AboutPageHandler {
         if (selected_device_name === null) return null;
         return this._razerpuppyPrefs.getDetectedDeviceByName(selected_device_name);
     }
-    onLogoBreathDual(device_serial) {
-        console.error(`onLogoBreathDual ${device_serial}`);
+    onLogoBreathDual(_device_serial) {
     }
     onLogoBreathDualError(device_serial, error) {
         console.error(`onLogoBreathDualError ${device_serial} ${error}`);
     }
-    onLogoBreathRandom(device_serial) {
-        console.error(`onLogoBreathRandom ${device_serial}`);
+    onLogoBreathRandom(_device_serial) {
     }
     onLogoBreathRandomError(device_serial, error) {
         console.error(`onLogoBreathRandomError ${device_serial} ${error}`);
     }
-    onLogoBreathSingle(device_serial) {
-        console.error(`onLogoBreathSingle ${device_serial}`);
+    onLogoBreathSingle(_device_serial) {        
     }
     onLogoBreathSingleError(device_serial, error) {
         console.error(`onLogoBreathSingleError ${device_serial} ${error}`);
     }
-    onLogoBrightness(device_serial) {
-        console.error(`onLogoBrightness ${device_serial}`);
+    onLogoBrightness(_device_serial) {
     }
     onLogoBrightnessError(device_serial, error) {
         console.error(`onLogoBrightnessError ${device_serial} ${error}`);
     }
-    onLogoNone(device_serial) {
-        console.error(`onLogoNone ${device_serial}`);
+    onLogoNone(_device_serial) {
     }
     onLogoNoneError(device_serial, error) {
         console.error(`onLogoNoneError ${device_serial} ${error}`);
     }
-    onLogoReactive(device_serial) {
-        console.error(`onLogoReactive ${device_serial}`);
+    onLogoReactive(_device_serial) {
     }
     onLogoReactiveError(device_serial, error) {
         console.error(`onLogoReactiveError ${device_serial} ${error}`);
     }
-    onLogoSpectrum(device_serial) {
-        console.error(`onLogoSpectrum ${device_serial}`);
+    onLogoSpectrum(_device_serial) {
     }
     onLogoSpectrumError(device_serial, error) {
         console.error(`onLogoSpectrumError ${device_serial} ${error}`);
     }
-    onLogoStatic(device_serial) {
-        console.error(`onLogoStatic ${device_serial}`);
+    onLogoStatic(_device_serial) {
     }
     onLogoStaticError(device_serial, error) {
         console.error(`onLogoStaticError ${device_serial} ${error}`);
     }
     onDeviceName(device) {
-        console.error(`RGB Page Device ${device._device_serial} has battery: ${device._has_get_logo_effect_method}`);
+        this._razerpuppyPrefs.logDevelopment(`RGB Page Device ${device._device_serial} has battery: ${device._has_get_logo_effect_method}`);
         if (!device._has_get_logo_effect_method) return;
         
         this._combo_strings.append(device._device_name);   
