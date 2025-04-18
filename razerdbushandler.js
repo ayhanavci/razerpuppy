@@ -5,10 +5,6 @@ import GLib from 'gi://GLib';
 function logException(message) {
     console.error(message);
 }
-/*function logDevelopment(message) {
-    if (Constants.LOG_DEVELOPMENT_ENABLED) 
-        console.error(message);
-}*/
 
 export class RazerDbusHandler {
     constructor() {
